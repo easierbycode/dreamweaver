@@ -18,12 +18,21 @@ local TweenService = game:GetService("TweenService")
 ---------------------------------------------------------------------------
 local CHIBI_SCALES = {
 	-- Plush-toy proportions: a tiny, squat, chubby body under a huge head
-	HeightScale = 0.55, -- overall body height (1 = normal)
-	WidthScale = 1.2, -- wider = chubbier
-	DepthScale = 1.2,
+	HeightScale = 0.62, -- overall body height (1 = normal)
+	WidthScale = 1.05, -- keeps the arms rounded instead of flat slabs
+	DepthScale = 1.25, -- extra depth makes the body chubby like a stuffed toy
 	HeadScale = 2, -- giant plush head
 	BodyTypeScale = 0, -- 0 = blocky/childlike proportions
 	ProportionScale = 0, -- 0 = wider, less lanky
+}
+
+local PLUSH_SETTINGS = {
+	-- Swap every avatar's body parts for the plain classic blocky ones, so thin
+	-- or sculpted bodies don't end up with stretched, bendy "derpy" limbs.
+	-- Shirts, pants, skin colour, hair and accessories are kept.
+	UseClassicBody = true,
+	-- Give the body a soft fabric surface so it reads like a stuffed toy
+	FabricMaterial = true,
 }
 
 local EYE_SETTINGS = {
@@ -210,11 +219,31 @@ local function applyChibiBody(humanoid: Humanoid)
 		(desc :: any)[prop] = value
 	end
 
+	if PLUSH_SETTINGS.UseClassicBody then
+		-- 0 = the default classic part for each slot
+		desc.Torso = 0
+		desc.LeftArm = 0
+		desc.RightArm = 0
+		desc.LeftLeg = 0
+		desc.RightLeg = 0
+	end
+
 	local applied, err = pcall(function()
 		humanoid:ApplyDescription(desc)
 	end)
 	if not applied then
 		warn("[ChibiAvatars] ApplyDescription failed:", err)
+	end
+
+	if PLUSH_SETTINGS.FabricMaterial then
+		local character = humanoid.Parent
+		if character then
+			for _, part in character:GetChildren() do
+				if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+					part.Material = Enum.Material.Fabric
+				end
+			end
+		end
 	end
 end
 
