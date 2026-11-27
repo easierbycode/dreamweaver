@@ -33,7 +33,7 @@ local EYE_SETTINGS = {
 	Lash = Color3.fromRGB(0, 0, 0), -- heavy top lash line
 	Highlight = Color3.fromRGB(255, 255, 255),
 	SparkleColor = Color3.fromRGB(255, 255, 255),
-	HideOriginalFace = true, -- hide the classic face decal so eyes don't overlap
+	HideOriginalFace = true, -- remove the avatar's own face (brows, eyes, mouth) so only these eyes show
 	Sparkles = true, -- tiny glitter particles around the eyes
 }
 
@@ -137,9 +137,18 @@ local function addSparklyEyes(character: Model)
 	end
 
 	if EYE_SETTINGS.HideOriginalFace then
-		local face = head:FindFirstChild("face")
-		if face and face:IsA("Decal") then
-			face.Transparency = 1
+		-- Wipe everything off the face so only the chibi eyes show.
+		-- Classic heads draw the face with Decals; 3D/dynamic heads bake the
+		-- eyebrows, eyes and mouth into a SurfaceAppearance or mesh texture.
+		for _, child in head:GetChildren() do
+			if child:IsA("Decal") then
+				child.Transparency = 1
+			elseif child:IsA("SurfaceAppearance") or child:IsA("FaceControls") then
+				child:Destroy()
+			end
+		end
+		if head:IsA("MeshPart") then
+			(head :: MeshPart).TextureID = ""
 		end
 	end
 
