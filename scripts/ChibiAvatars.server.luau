@@ -3,7 +3,7 @@
 -- Place in: ServerScriptService
 --
 -- On join and on every respawn, turns each player's own avatar into a chibi
--- version: short, slim body with a big head, plus big glossy black eyes.
+-- plush version: tiny squat body, giant head, plus big glossy black eyes.
 -- Their clothing, accessories, skin colour and animations are kept, because
 -- we start from the avatar they already have and only change the scales.
 --
@@ -17,10 +17,11 @@ local TweenService = game:GetService("TweenService")
 -- Tweak these to taste
 ---------------------------------------------------------------------------
 local CHIBI_SCALES = {
-	HeightScale = 0.75, -- overall body height (1 = normal)
-	WidthScale = 0.85,
-	DepthScale = 0.85,
-	HeadScale = 1.45, -- big head
+	-- Plush-toy proportions: a tiny, squat, chubby body under a huge head
+	HeightScale = 0.55, -- overall body height (1 = normal)
+	WidthScale = 1.2, -- wider = chubbier
+	DepthScale = 1.2,
+	HeadScale = 2, -- giant plush head
 	BodyTypeScale = 0, -- 0 = blocky/childlike proportions
 	ProportionScale = 0, -- 0 = wider, less lanky
 }
