@@ -3,7 +3,7 @@
 -- Place in: ServerScriptService
 --
 -- On join and on every respawn, turns each player's own avatar into a chibi
--- version: short, slim body with a big head, plus big sparkly black anime eyes.
+-- version: short, slim body with a big head, plus big glossy black eyes.
 -- Their clothing, accessories, skin colour and animations are kept, because
 -- we start from the avatar they already have and only change the scales.
 --
@@ -26,10 +26,12 @@ local CHIBI_SCALES = {
 }
 
 local EYE_SETTINGS = {
-	IrisTop = Color3.fromRGB(45, 45, 45), -- gradient top of the iris (dark grey)
-	IrisBottom = Color3.fromRGB(0, 0, 0), -- gradient bottom of the iris (black)
-	Outline = Color3.fromRGB(0, 0, 0),
-	Pupil = Color3.fromRGB(255, 255, 255), -- white dot in the middle
+	-- Big glossy black eyes with a cluster of white highlights on top
+	-- and a few small white dots near the bottom. No colour anywhere.
+	EyeTop = Color3.fromRGB(0, 0, 0), -- gradient top of the eye (pure black)
+	EyeBottom = Color3.fromRGB(70, 70, 70), -- gradient bottom (soft dark grey glow)
+	Lash = Color3.fromRGB(0, 0, 0), -- heavy top lash line
+	Highlight = Color3.fromRGB(255, 255, 255),
 	SparkleColor = Color3.fromRGB(255, 255, 255),
 	HideOriginalFace = true, -- hide the classic face decal so eyes don't overlap
 	Sparkles = true, -- tiny glitter particles around the eyes
@@ -52,70 +54,74 @@ local function twinkle(obj: GuiObject, delay: number)
 	TweenService:Create(obj, info, { BackgroundTransparency = 0.45 }):Play()
 end
 
+local function dot(parent: Instance, name: string, x: number, y: number, w: number, h: number)
+	local d = Instance.new("Frame")
+	d.Name = name
+	d.AnchorPoint = Vector2.new(0.5, 0.5)
+	d.Position = UDim2.fromScale(x, y)
+	d.Size = UDim2.fromScale(w, h)
+	d.BackgroundColor3 = EYE_SETTINGS.Highlight
+	d.BorderSizePixel = 0
+	d.ZIndex = 3
+	round(d)
+	d.Parent = parent
+	return d
+end
+
 local function makeEye(parent: Instance, centerX: number, isLeft: boolean)
-	-- Outer eye (dark outline / sclera edge)
+	-- x positions below are written for the left eye; the right eye mirrors them
+	local function mx(x: number): number
+		return if isLeft then x else 1 - x
+	end
+
+	-- The eye: a big, wide black oval with a soft grey glow at the bottom
 	local eye = Instance.new("Frame")
 	eye.Name = isLeft and "LeftEye" or "RightEye"
 	eye.AnchorPoint = Vector2.new(0.5, 0.5)
-	eye.Position = UDim2.fromScale(centerX, 0.55)
-	eye.Size = UDim2.fromScale(0.3, 0.42)
-	eye.BackgroundColor3 = EYE_SETTINGS.Outline
+	eye.Position = UDim2.fromScale(centerX, 0.56)
+	eye.Size = UDim2.fromScale(0.4, 0.46)
+	eye.BackgroundColor3 = Color3.new(1, 1, 1)
 	eye.BorderSizePixel = 0
+	eye.ClipsDescendants = false
 	round(eye)
-	eye.Parent = parent
-
-	-- Iris with a vertical colour gradient
-	local iris = Instance.new("Frame")
-	iris.Name = "Iris"
-	iris.AnchorPoint = Vector2.new(0.5, 0.5)
-	iris.Position = UDim2.fromScale(0.5, 0.52)
-	iris.Size = UDim2.fromScale(0.82, 0.86)
-	iris.BackgroundColor3 = Color3.new(1, 1, 1)
-	iris.BorderSizePixel = 0
-	round(iris)
 	local grad = Instance.new("UIGradient")
 	grad.Rotation = 90
-	grad.Color = ColorSequence.new(EYE_SETTINGS.IrisTop, EYE_SETTINGS.IrisBottom)
-	grad.Parent = iris
-	iris.Parent = eye
+	grad.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, EYE_SETTINGS.EyeTop),
+		ColorSequenceKeypoint.new(0.6, EYE_SETTINGS.EyeTop),
+		ColorSequenceKeypoint.new(1, EYE_SETTINGS.EyeBottom),
+	})
+	grad.Parent = eye
+	eye.Parent = parent
 
-	-- Pupil
-	local pupil = Instance.new("Frame")
-	pupil.Name = "Pupil"
-	pupil.AnchorPoint = Vector2.new(0.5, 0.5)
-	pupil.Position = UDim2.fromScale(0.5, 0.55)
-	pupil.Size = UDim2.fromScale(0.18, 0.16)
-	pupil.BackgroundColor3 = EYE_SETTINGS.Pupil
-	pupil.BorderSizePixel = 0
-	round(pupil)
-	pupil.Parent = iris
+	-- Heavy lash line across the top so the eye looks droopy and soft
+	local lash = Instance.new("Frame")
+	lash.Name = "Lash"
+	lash.AnchorPoint = Vector2.new(0.5, 0)
+	lash.Position = UDim2.fromScale(0.5, -0.04)
+	lash.Size = UDim2.fromScale(1.06, 0.3)
+	lash.BackgroundColor3 = EYE_SETTINGS.Lash
+	lash.BorderSizePixel = 0
+	lash.ZIndex = 2
+	round(lash)
+	lash.Parent = eye
 
-	-- Big highlight (upper corner, toward the outside of the face)
-	local big = Instance.new("Frame")
-	big.Name = "Shine"
-	big.AnchorPoint = Vector2.new(0.5, 0.5)
-	big.Position = UDim2.fromScale(isLeft and 0.32 or 0.68, 0.3)
-	big.Size = UDim2.fromScale(0.38, 0.32)
-	big.BackgroundColor3 = Color3.new(1, 1, 1)
-	big.BorderSizePixel = 0
-	big.ZIndex = 3
-	round(big)
-	big.Parent = iris
+	-- Cloud-shaped cluster of highlights near the top, toward the nose
+	local c1 = dot(eye, "ShineA", mx(0.56), 0.2, 0.2, 0.17)
+	local c2 = dot(eye, "ShineB", mx(0.7), 0.17, 0.15, 0.13)
+	local c3 = dot(eye, "ShineC", mx(0.44), 0.24, 0.12, 0.1)
+	dot(eye, "ShineD", mx(0.8), 0.24, 0.08, 0.07)
 
-	-- Small highlight (lower, opposite side)
-	local small = Instance.new("Frame")
-	small.Name = "Glint"
-	small.AnchorPoint = Vector2.new(0.5, 0.5)
-	small.Position = UDim2.fromScale(isLeft and 0.68 or 0.32, 0.72)
-	small.Size = UDim2.fromScale(0.16, 0.14)
-	small.BackgroundColor3 = Color3.new(1, 1, 1)
-	small.BorderSizePixel = 0
-	small.ZIndex = 3
-	round(small)
-	small.Parent = iris
+	-- A few small dots near the bottom
+	local d1 = dot(eye, "GlintA", mx(0.8), 0.64, 0.1, 0.09)
+	local d2 = dot(eye, "GlintB", mx(0.24), 0.8, 0.09, 0.08)
+	dot(eye, "GlintC", mx(0.48), 0.84, 0.06, 0.05)
 
-	twinkle(big, isLeft and 0 or 0.3)
-	twinkle(small, isLeft and 0.45 or 0.15)
+	twinkle(c1, isLeft and 0 or 0.3)
+	twinkle(c2, isLeft and 0.2 or 0.5)
+	twinkle(c3, isLeft and 0.4 or 0.1)
+	twinkle(d1, isLeft and 0.45 or 0.15)
+	twinkle(d2, isLeft and 0.7 or 0.35)
 end
 
 local function addSparklyEyes(character: Model)
@@ -147,8 +153,8 @@ local function addSparklyEyes(character: Model)
 	gui.Adornee = head
 	gui.Parent = head
 
-	makeEye(gui, 0.3, true)
-	makeEye(gui, 0.7, false)
+	makeEye(gui, 0.27, true)
+	makeEye(gui, 0.73, false)
 
 	if EYE_SETTINGS.Sparkles then
 		local att = Instance.new("Attachment")
