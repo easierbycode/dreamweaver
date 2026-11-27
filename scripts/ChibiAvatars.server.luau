@@ -33,6 +33,9 @@ local PLUSH_SETTINGS = {
 	UseClassicBody = true,
 	-- Give the body a soft fabric surface so it reads like a stuffed toy
 	FabricMaterial = true,
+	-- Arm thickness compared with the body (1 = as thick as the body scale
+	-- makes them). Below 1 keeps the arms from turning into giant planks.
+	ArmThickness = 0.7,
 }
 
 local EYE_SETTINGS = {
@@ -202,6 +205,51 @@ end
 ---------------------------------------------------------------------------
 -- Chibi body (scales on the player's own HumanoidDescription)
 ---------------------------------------------------------------------------
+local ARM_PARTS = { "UpperArm", "LowerArm", "Hand" }
+local ARM_JOINTS = { "Shoulder", "Elbow", "Wrist" }
+
+local function slimArms(character: Model)
+	-- Thin the arms (width and depth only, never length) so they look like
+	-- soft plush limbs instead of big flat boxes
+	local k = PLUSH_SETTINGS.ArmThickness
+	if k >= 1 then
+		return
+	end
+	for _, side in { "Left", "Right" } do
+		for _, name in ARM_PARTS do
+			local part = character:FindFirstChild(side .. name)
+			if part and part:IsA("BasePart") then
+				part.Size = Vector3.new(part.Size.X * k, part.Size.Y, part.Size.Z * k)
+				-- Keep Roblox's own body scaling in step with the new size
+				local original = part:FindFirstChild("OriginalSize")
+				if original and original:IsA("Vector3Value") then
+					original.Value = Vector3.new(original.Value.X * k, original.Value.Y, original.Value.Z * k)
+				end
+				-- Pull the joints in with the surface so the arm stays on the shoulder
+				for _, att in part:GetChildren() do
+					if att:IsA("Attachment") then
+						att.Position = Vector3.new(att.Position.X * k, att.Position.Y, att.Position.Z * k)
+					end
+				end
+			end
+		end
+		-- Re-fit the shoulder, elbow and wrist joints to the moved attachments
+		for _, joint in ARM_JOINTS do
+			local motorName = side .. joint
+			for _, motor in character:GetDescendants() do
+				if motor:IsA("Motor6D") and motor.Name == motorName and motor.Part0 and motor.Part1 then
+					local a0 = motor.Part0:FindFirstChild(motorName .. "RigAttachment")
+					local a1 = motor.Part1:FindFirstChild(motorName .. "RigAttachment")
+					if a0 and a1 and a0:IsA("Attachment") and a1:IsA("Attachment") then
+						motor.C0 = a0.CFrame
+						motor.C1 = a1.CFrame
+					end
+				end
+			end
+		end
+	end
+end
+
 local function applyChibiBody(humanoid: Humanoid)
 	if humanoid.RigType ~= Enum.HumanoidRigType.R15 then
 		return -- R6 can't be rescaled this way
@@ -233,6 +281,11 @@ local function applyChibiBody(humanoid: Humanoid)
 	end)
 	if not applied then
 		warn("[ChibiAvatars] ApplyDescription failed:", err)
+	end
+
+	local model = humanoid.Parent
+	if applied and model and model:IsA("Model") then
+		slimArms(model)
 	end
 
 	if PLUSH_SETTINGS.FabricMaterial then
